@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Werror -Wall -fsanitize=address
+CFLAGS = -g -Werror -Wall
 programs: sbpp
 
 ifdef COVERAGE
@@ -16,7 +16,14 @@ $(OBJDIR)/%.o: %.c
 	@mkdir -p $(@D)
 	$(CC) -c $(CFLAGS) -o $@ $< -I ../include
 
-sbpp: $(addprefix $(OBJDIR)/,$(SBPP_OBJS)) ../build/util.o
+$(OBJDIR)/preprocessor-parser.o : preprocessor-parser.c
+	@mkdir -p $(@D)
+	$(CC) -c $(CFLAGS) -o $@ $< -I ./include -Wno-discarded-qualifiers -Wno-incompatible-pointer-types-discards-qualifiers -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-function
+
+parser: preprocessor-parser.peg
+	packcc -a preprocessor-parser.peg
+
+sbpp: $(addprefix $(OBJDIR)/,$(SBPP_OBJS))
 	$(CC) $(CFLAGS) -o $@ $^
 
 clean:

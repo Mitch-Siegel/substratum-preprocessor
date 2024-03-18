@@ -1,0 +1,62 @@
+%source {
+   char *dbgEventNames[3] = {" eval", "MATCH", "nomatc"};
+}
+
+%auxil "struct PreprocessorContext *"
+%value "char *"
+
+
+%header {
+   #include "preprocessor-buffering.h"
+   #include "preprocessor-config.h"
+}
+
+file
+   <- ll:line_list eof
+
+line_list
+    <- ll:line_list l:line
+     / l:line
+
+line
+   <- d:define_line   { printf("DEFINE LINE!\n"); }
+    / u:undef_line    { printf("UNDEF LINE!\n"); }
+    / comment         { printf("COMMENT!\n"); }
+    / character*  { printf("CHAR!\n"); }
+
+character
+   <- . { printf("char: %c\n", (char)($0[0])); bufferInsert(auxil, $0[0]); }
+
+define_line
+   <- d:define_token blank+ <token> _ eol { printf("%s->%s\n", d, $1); }
+    / define_token _ eol
+
+define_token
+   <- "#define " blank* <token> { $$ = $1; }
+
+token
+   <- (nonspace+) { $$ = $0; }
+
+undef_line
+   <- "#undef " _ nonspace+ _ nonspace* _ eol
+
+_ 
+   <- _*
+    / (space / comment)*
+
+comment
+   <- '/*' ( !'*/' . )* '*/'
+    ## error handling ##
+    / '/*' ( !'*/' . )*
+    {
+      perror("Unclosed comment block!\n");
+      abort();
+    }
+    / '//' (!eol .)* eol
+
+
+nonspace <- (!space .)
+space <- blank / eol
+blank <- [ \t\v\f]
+eol <- '\r\n' / '\n' / '\r'
+eof <- !.
