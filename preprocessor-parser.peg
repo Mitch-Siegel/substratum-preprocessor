@@ -9,6 +9,7 @@
 %header {
    #include "preprocessor-buffering.h"
    #include "preprocessor-config.h"
+   #include "macro-definitions.h"
 }
 
 file
@@ -19,17 +20,17 @@ line_list
      / l:line
 
 line
-   <- d:define_line   { printf("DEFINE LINE!\n"); }
-    / u:undef_line    { printf("UNDEF LINE!\n"); }
-    / comment         { printf("COMMENT!\n"); }
-    / character*  { printf("CHAR!\n"); }
+   <- d:define_line
+    / u:undef_line
+    / comment
+    / character*
 
 character
-   <- . { printf("char: %c\n", (char)($0[0])); bufferInsert(auxil, $0[0]); }
+   <- . { bufferInsert(auxil, $0[0]); }
 
 define_line
-   <- d:define_token blank+ <token> _ eol { printf("%s->%s\n", d, $1); }
-    / define_token _ eol
+   <- d:define_token blank+ <token> _ eol { defineMacro(auxil, d, $1); }
+    / d:define_token _ eol                { defineMacro(auxil, d, NULL); }
 
 define_token
    <- "#define " blank* <token> { $$ = $1; }

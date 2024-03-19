@@ -15,7 +15,7 @@
     inChar;                                                   \
 })
 
-#define PCC_DEBUG(auxil, event, rule, level, pos, buffer, length)                                                              \
+/*#define PCC_DEBUG(auxil, event, rule, level, pos, buffer, length)                                                              \
     {                                                                                                                          \
         for (size_t i = 0; i < level; i++)                                                                                     \
         {                                                                                                                      \
@@ -35,4 +35,4 @@
             }                                                                                                                  \
         }                                                                                                                      \
         printf("]\n");                                                                                                         \
-    }
+    }*/

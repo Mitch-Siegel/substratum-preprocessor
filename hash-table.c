@@ -284,11 +284,11 @@ struct HashTable *HashTable_New(int nBuckets)
 struct HashTableEntry *HashTable_Insert(struct HashTable *ht, char *key, void *value)
 {
     struct HashTableEntry *newEntry = malloc(sizeof(struct HashTableEntry));
-	newEntry->key = strdup(value);
+	newEntry->key = key;
     newEntry->value = value;
-    newEntry->hash = hash(value);
+    newEntry->hash = hash(key);
 
-	LinkedList_Append(ht->buckets[ht->nBuckets % newEntry->hash], newEntry);
+	LinkedList_Append(ht->buckets[newEntry->hash % ht->nBuckets], newEntry);
 
 	return newEntry;
 }
@@ -296,9 +296,8 @@ struct HashTableEntry *HashTable_Insert(struct HashTable *ht, char *key, void *v
 struct HashTableEntry *HashTable_Lookup(struct HashTable *ht, char *key)
 {
 	unsigned int strHash = hash(key);
-	strHash = strHash % ht->nBuckets;
 
-	struct LinkedList *bucket = ht->buckets[strHash];
+	struct LinkedList *bucket = ht->buckets[strHash % ht->nBuckets];
 	if (bucket->size == 0)
 	{
 		return NULL;
@@ -309,7 +308,7 @@ struct HashTableEntry *HashTable_Lookup(struct HashTable *ht, char *key)
 	while (runner != NULL)
 	{
         struct HashTableEntry *examinedEntry = runner->data;
-		if ((examinedEntry->hash == strHash) && strcmp(examinedEntry->key, key))
+		if ((examinedEntry->hash == strHash) && (strcmp(examinedEntry->key, key) == 0))
 		{
 			return examinedEntry;
 		}

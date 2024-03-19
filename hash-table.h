@@ -1,4 +1,7 @@
 
+#ifndef _HASH_TABLE_H_
+#define _HASH_TABLE_H_
+
 struct LinkedListNode
 {
 	struct LinkedListNode *next;
@@ -47,3 +50,5 @@ struct HashTableEntry *HashTable_Insert(struct HashTable *ht, char *key, void *v
 struct HashTableEntry *HashTable_Lookup(struct HashTable *ht, char *key);
 
 void HashTable_Free(struct HashTable *ht);
+
+#endif

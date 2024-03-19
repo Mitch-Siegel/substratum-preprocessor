@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Werror -Wall
+CFLAGS = -g -Werror -Wall -fsanitize=address
 programs: sbpp
 
 ifdef COVERAGE

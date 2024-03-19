@@ -1,4 +1,8 @@
 #include <stdio.h>
+#include "hash-table.h"
+
+#ifndef _PREPROCESSOR_BUFFERING_H_
+#define _PREPROCESSOR_BUFFERING_H_
 
 struct PreprocessorContext
 {
@@ -12,9 +16,15 @@ struct PreprocessorContext
     unsigned int curLineRaw;
     unsigned int curColRaw;
     char *curFileName;
+    struct HashTable *defines;
+    struct Stack *keywordsByLength;
 };
 
 char bufferConsume(struct PreprocessorContext *context);
 
 void bufferInsert(struct PreprocessorContext *context, char c);
+
+void bufferInsertFront(struct PreprocessorContext *context, char *s);
+
+#endif
 
