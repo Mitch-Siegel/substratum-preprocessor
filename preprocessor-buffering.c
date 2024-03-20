@@ -130,12 +130,23 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
 
     while (pcc_parse(parseContext, &ret))
     {
-        attemptMacroSubstitution(&context, 1);
+        while (context.bufLen > 0)
+        {
+            attemptMacroSubstitution(&context, 0);
+            if(context.bufLen > 0)
+            {
+                fputc(bufferConsume(&context), context.outFile);
+            }
+        }
     }
 
     while (context.bufLen > 0)
     {
         attemptMacroSubstitution(&context, 0);
+        if(context.bufLen > 0)
+        {
+            fputc(bufferConsume(&context), context.outFile);
+        }
     }
 
     free(context.inBuf);

@@ -42,11 +42,6 @@ void handleDefineChange(struct PreprocessorContext *c)
 
             int thisLen = strlen(thisKw);
 
-            if (thisLen > longestKeyword)
-            {
-                longestKeyword = thisLen;
-            }
-
             int compLen = strlen((char *)c->keywordsByLength->data[j + 1]);
 
             if (thisLen > compLen)
@@ -56,6 +51,11 @@ void handleDefineChange(struct PreprocessorContext *c)
                 c->keywordsByLength->data[j + 1] = swap;
             }
         }
+    }
+
+    if(c->keywordsByLength->size > 0)
+    {
+        longestKeyword = strlen(c->keywordsByLength->data[c->keywordsByLength->size - 1]);
     }
 }
 
@@ -96,7 +96,7 @@ int attemptMacroSubstitutionRecursive(struct PreprocessorContext *c, char stillP
     }
 
     // early return if there is more input (put it into the buffer so we don't accidentally greedily match a prefix of a keyword)
-    if (stillParsing && (c->bufLen < longestKeyword))
+    if ((stillParsing && (c->bufLen < longestKeyword)) || (longestKeyword == 0))
     {
         return 0;
     }

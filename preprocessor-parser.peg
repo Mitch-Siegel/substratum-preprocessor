@@ -12,19 +12,13 @@
    #include "macro-definitions.h"
 }
 
-file
-   <- ll:line_list eof
-
-line_list
-    <- ll:line_list l:line
-     / l:line
-
 line
    <- d:define_line
     / u:undef_line
     / i:include_line
     / comment
     / character* <e:eol> { for(int i = 0; i < strlen($1); i++) {bufferInsert(auxil, $1[i]);}; }
+    / eof
 
 character
    <- [^\n] { bufferInsert(auxil, $0[0]); }
