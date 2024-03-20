@@ -333,7 +333,7 @@ struct HashTableEntry *HashTable_Lookup(struct HashTable *ht, char *key)
 
 int compareHashTableEntries(void *a, void *b)
 {
-	return strcmp((((struct HashTableEntry *)a)->key), (((struct HashTableEntry *)b)->key));
+	return strcmp((((struct HashTableEntry *)a)->key), b);
 }
 
 void HashTable_Remove(struct HashTable *ht, char *key, void(*freeDataFunction)(void *))

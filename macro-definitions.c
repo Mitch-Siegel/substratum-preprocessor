@@ -140,5 +140,6 @@ void undefineMacro(struct PreprocessorContext *c, char *token)
     if(e != NULL)
     {
         HashTable_Remove(c->defines, token, free);
+        handleDefineChange(c);
     }
 }
