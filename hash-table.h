@@ -56,6 +56,8 @@ struct HashTableEntry *HashTable_Insert(struct HashTable *ht, char *key, void *v
 
 struct HashTableEntry *HashTable_Lookup(struct HashTable *ht, char *key);
 
+void HashTable_Remove(struct HashTable *ht, char *key, void(*freeDataFunction)(void *));
+
 void HashTable_Free(struct HashTable *ht);
 
 #endif

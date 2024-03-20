@@ -34,13 +34,16 @@ define_line
     / d:define_token _ eol                { defineMacro(auxil, d, NULL); }
 
 undef_line
-   <- "#undef " blank* t:token _ eol      { undefineMacro(auxil, t); }
+   <- u:undef_token _ eol      { undefineMacro(auxil, u); }
 
 include_line
    <- "#include " blank* "\"" <[^"\""]+> "\"" _ eol { includeFile(auxil, $1); }
 
 define_token
    <- "#define " blank* <token> { $$ = $1; }
+
+undef_token
+   <- "#undef " blank* <token> { $$ = $1; }
 
 token
    <- (nonspace+) { $$ = $0; }

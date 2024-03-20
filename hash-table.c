@@ -331,6 +331,28 @@ struct HashTableEntry *HashTable_Lookup(struct HashTable *ht, char *key)
 // 	}
 // }
 
+int compareHashTableEntries(void *a, void *b)
+{
+	return strcmp((((struct HashTableEntry *)a)->key), (((struct HashTableEntry *)b)->key));
+}
+
+void HashTable_Remove(struct HashTable *ht, char *key, void(*freeDataFunction)(void *))
+{
+	unsigned int strHash = hash(key);
+
+	struct LinkedList *bucket = ht->buckets[strHash % ht->nBuckets];
+	if (bucket->size == 0)
+	{
+		printf("attempt to delete nonexistent hash table element with key %s\n", key);
+	}
+
+	void *data = LinkedList_Delete(bucket, compareHashTableEntries, key);
+	if(freeDataFunction != NULL)
+	{
+		freeDataFunction(data);
+	}
+}
+
 void HashTable_Free(struct HashTable *ht)
 {
 	for (int i = 0; i < ht->nBuckets; i++)

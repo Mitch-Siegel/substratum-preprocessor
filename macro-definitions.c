@@ -136,4 +136,9 @@ void defineMacro(struct PreprocessorContext *c, char *token, char *outVal)
 
 void undefineMacro(struct PreprocessorContext *c, char *token)
 {
+    struct HashTableEntry *e = HashTable_Lookup(c->defines, token);
+    if(e != NULL)
+    {
+        HashTable_Remove(c->defines, token, free);
+    }
 }
