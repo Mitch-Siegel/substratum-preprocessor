@@ -24,8 +24,9 @@ character
    <- [^\n] { bufferInsert(auxil, $0[0]); }
 
 define_line
-   <- d:define_token blank+ <token> _ eol { defineMacro(auxil, d, $1); }
-    / d:define_token _ eol                { defineMacro(auxil, d, NULL); }
+   <- d:define_token blank+ <token> _ eol                                      { defineTextSubMacro(auxil, d, $1); }
+    / d:define_token _ eol                                                     { defineTextSubMacro(auxil, d, NULL); }
+    / d:define_token blank* "(" m:func_param_list blank* ")" b:func_body eol   { defineFunctionMacro(auxil, d, m, b); }
 
 undef_line
    <- u:undef_token _ eol      { undefineMacro(auxil, u); }
@@ -36,11 +37,26 @@ include_line
 define_token
    <- "#define " blank* <token> { $$ = $1; }
 
+func_param_list
+   <- <pl:func_param_list> blank* "," blank* <p:func_param> { pl = realloc(pl, strlen(pl) + strlen(p) + 2); strcat(pl, " "); strcat(pl, p); free(p); $$ = pl;}
+    / blank* <p:func_param>                                 { $$ = strdup(p); }
+
+func_param
+   <- non_comma_character+ { $$ = strdup($0); }
+
+func_body
+   <- (!eol .)+ { $$ = $0; }
+
+non_comma_character
+   <- (!"," nonspace_nonparen)
+
 undef_token
    <- "#undef " blank* <token> { $$ = $1; }
 
 token
-   <- (nonspace+) { $$ = $0; }
+   <- nonspace_nonparen+ { $$ = strdup($0); }
+
+
 
 _ 
    <- _*
@@ -57,7 +73,8 @@ comment
     / '//' (!eol .)* eol
 
 
-nonspace <- (!space .)
+nonspace_nonparen <- (!space !"(" !")" .)
+
 space <- blank / eol
 blank <- [ \t\v\f]
 eol <- '\r\n' / '\n' / '\r'

@@ -1,6 +1,8 @@
 #include "preprocessor-buffering.h"
 
-void defineMacro(struct PreprocessorContext *c, char *token, char *outVal);
+void defineTextSubMacro(struct PreprocessorContext *c, char *token, char *outVal);
+
+void defineFunctionMacro(struct PreprocessorContext *c, char *token, char *spaceSeparatedParamsList, char *outVal);
 
 void undefineMacro(struct PreprocessorContext *c, char *token);
 
