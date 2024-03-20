@@ -70,9 +70,11 @@ struct Macro *findMacro(struct PreprocessorContext *c)
         char *comparedKeyword = c->keywordsByLength->data[i];
         if (strncmp(c->inBuf, comparedKeyword, strlen(comparedKeyword)) == 0)
         {
+            free(strBuf);
             return HashTable_Lookup(c->defines, comparedKeyword)->value;
         }
     }
+    free(strBuf);
     return NULL;
 }
 

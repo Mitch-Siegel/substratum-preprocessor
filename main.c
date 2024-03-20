@@ -1,50 +1,69 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <getopt.h>
 #include <string.h>
-#include <stdint.h>
+#include <stdlib.h>
 
 #include "hash-table.h"
-#include "preprocessor-parser.h"
 #include "macro-definitions.h"
 
+struct LinkedList *includePath;
+
+void usage()
+{
+	printf("Substratum preprocessor: Usage\n");
+	printf("(-i) infile : specify input substratum file to compile - default: stdin\n");
+	printf("(-o) outfile: specify output file to generate object code to - default: stdout\n");
+    printf("(-I) dir: include 'dir' in search for #include-s\n");
+	printf("\n");
+}
 
 
 int main(int argc, char *argv[])
 {
+    includePath = LinkedList_New();
+
+    char *inFileName = "stdin";
+    char *outFileName = "stdout";
+
+    int option;
+	while ((option = getopt(argc, argv, "i:o:I:")) != EOF)
+	{
+		switch (option)
+		{
+		case 'i':
+			inFileName = optarg;
+			break;
+
+		case 'o':
+			outFileName = optarg;
+			break;
+
+		case 'I':
+		{
+			LinkedList_Append(includePath, realpath(optarg, NULL));
+		}
+			break;
+
+		default:
+			usage();
+            exit(-1);
+		}
+	}
+
+
     struct PreprocessorContext c;
     memset(&c, 0, sizeof(struct PreprocessorContext));
-    c.defines = HashTable_New(10);
-    c.keywordsByLength = Stack_New();
 
-    if(argc > 1)
+    if(strcmp(outFileName, "stdout"))
     {
-        c.inFile = fopen(argv[1], "rb");
-        if(c.inFile == NULL)
-        {
-            printf("Unable to open file %s\n", argv[1]);
-            abort();
-        }
+        c.outFile = fopen(outFileName, "wb");
     }
     else
     {
-        c.inFile = stdin;
+        c.outFile = stdout;
     }
 
-    c.outFile = stdout;
-    char *ret;
+    includeFile(&c, inFileName);
 
-    pcc_context_t *parseContext = pcc_create(&c);
-
-    while (pcc_parse(parseContext, &ret))
-    {
-        attemptMacroSubstitution(&c, 1);
-    }
-
-    while(c.bufLen > 0)
-    {
-        attemptMacroSubstitution(&c, 0);
-    }
-
-    pcc_destroy(parseContext);
-    printf("sbpp\n");
+    LinkedList_Free(includePath, free);
 }

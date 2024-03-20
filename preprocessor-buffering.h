@@ -18,6 +18,8 @@ struct PreprocessorContext
     char *curFileName;
     struct HashTable *defines;
     struct Stack *keywordsByLength;
+    int includeDepth;
+    struct PreprocessorContext *includedFrom;
 };
 
 char bufferConsume(struct PreprocessorContext *context);
@@ -25,6 +27,8 @@ char bufferConsume(struct PreprocessorContext *context);
 void bufferInsert(struct PreprocessorContext *context, char c);
 
 void bufferInsertFront(struct PreprocessorContext *context, char *s);
+
+void includeFile(struct PreprocessorContext *context, char *s);
 
 #endif
 

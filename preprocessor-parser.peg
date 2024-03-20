@@ -22,6 +22,7 @@ line_list
 line
    <- d:define_line
     / u:undef_line
+    / i:include_line
     / comment
     / character*
 
@@ -32,14 +33,17 @@ define_line
    <- d:define_token blank+ <token> _ eol { defineMacro(auxil, d, $1); }
     / d:define_token _ eol                { defineMacro(auxil, d, NULL); }
 
+undef_line
+   <- "#undef " blank* t:token _ eol      { undefineMacro(auxil, t); }
+
+include_line
+   <- "#include " blank* "\"" <[^"\""]+> "\"" _ eol { includeFile(auxil, $1); }
+
 define_token
    <- "#define " blank* <token> { $$ = $1; }
 
 token
    <- (nonspace+) { $$ = $0; }
-
-undef_line
-   <- "#undef " _ nonspace+ _ nonspace* _ eol
 
 _ 
    <- _*

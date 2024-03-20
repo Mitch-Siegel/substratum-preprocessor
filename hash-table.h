@@ -18,9 +18,9 @@ struct LinkedList
 
 struct HashTableEntry
 {
-    char *key;
-    void *value;
-    unsigned hash;
+	char *key;
+	void *value;
+	unsigned hash;
 };
 
 struct HashTable
@@ -41,7 +41,14 @@ struct Stack *Stack_New();
 void Stack_Free(struct Stack *s);
 
 void Stack_Push(struct Stack *s, void *data);
+
 void *Stack_Pop(struct Stack *s);
+
+struct LinkedList *LinkedList_New();
+
+void LinkedList_Free(struct LinkedList *l, void (*dataFreeFunction)(void *));
+
+void LinkedList_Append(struct LinkedList *l, void *element);
 
 struct HashTable *HashTable_New(int nBuckets);
 
