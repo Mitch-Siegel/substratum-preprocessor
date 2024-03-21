@@ -100,12 +100,9 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
 {
     assert(toOutput->type == mt_function);
 
-    printf("inval:%s\n", toOutput->inVal);
     textBuffer_erase(c->inBuf, strlen(toOutput->inVal));
 
     char *paramsListBuf = removeFirstLayerCommasFromMatchedParens(c->inBuf);
-
-    printf("paramslistbuf: %s\n", paramsListBuf);
 
     unsigned int paramsListLen = 0;
     char **paramsList = spaceSeparatedParamsListToArray(paramsListBuf, &paramsListLen);
@@ -126,13 +123,11 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
     for (int i = 0; i < toOutput->nParams; i++)
     {
         defineTextSubMacro(c, toOutput->paramsList[i], paramsList[i]);
-        printf("define sub %s->%s\n", toOutput->paramsList[i], paramsList[i]);
     }
 
     c->inBuf = textBuffer_new();
 
     int outValLen = strlen(toOutput->outVal);
-    printf("write outval %s to buffer\n", toOutput->outVal);
     for (int i = 0; i < outValLen; i++)
     {
         textBuffer_insert(c->inBuf, toOutput->outVal[i]);
@@ -154,7 +149,6 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
 
     textBuffer_free(c->inBuf);
     c->inBuf = oldBuf;
-
 }
 
 void handleMacro(struct PreprocessorContext *c, struct Macro *toOutput)
@@ -226,8 +220,14 @@ void defineFunctionMacro(struct PreprocessorContext *c, char *token, char *space
     struct Macro *newMacro = malloc(sizeof(struct Macro));
     memset(newMacro, 0, sizeof(struct Macro));
     newMacro->inVal = strdup(token);
-    newMacro->outVal = strdup(funcBody);
     newMacro->type = mt_function;
+
+    struct TextBuffer *macroBodyBuffer = textBuffer_new();
+    textBuffer_insertFront(macroBodyBuffer, funcBody);
+    textBuffer_insertFront(macroBodyBuffer, "(");
+    textBuffer_insert(macroBodyBuffer, ')');
+    newMacro->outVal = removeFirstLayerCommasFromMatchedParens(macroBodyBuffer);
+    textBuffer_free(macroBodyBuffer);
 
     newMacro->paramsList = spaceSeparatedParamsListToArray(spaceSeparatedParamsList, &newMacro->nParams);
 

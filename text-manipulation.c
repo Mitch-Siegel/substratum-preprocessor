@@ -31,13 +31,11 @@ char *removeFirstLayerCommasFromMatchedParens(struct TextBuffer *b)
     char *paramsListBuf = malloc(b->size);
     unsigned paramsListLen = 0;
 
-    
     // grab the first open paren out of the buffer to start
     if (textBuffer_consume(b) != '(')
     {
         printf("Error expanding function macro - didn't see open paren!\n");
     }
-
 
     int parenDepth = 1;
     while ((parenDepth > 0) && (b->size > 0))
@@ -83,4 +81,3 @@ char *removeFirstLayerCommasFromMatchedParens(struct TextBuffer *b)
     paramsListBuf[paramsListLen] = '\0';
     return paramsListBuf;
 }
-
