@@ -9,39 +9,67 @@
 
 #include "preprocessor-parser.h"
 
-char bufferConsume(struct PreprocessorContext *context)
+struct TextBuffer *textBuffer_new()
 {
-    assert(context->bufLen > 0);
-    char toReturn = context->inBuf[0];
-    --context->bufLen;
-    memmove(context->inBuf, context->inBuf + 1, context->bufLen);
+    struct TextBuffer *b = malloc(sizeof(struct TextBuffer));
+    memset(b, 0, sizeof(struct TextBuffer));
+    return b;
+}
+
+
+void textBuffer_free(struct TextBuffer *b)
+{
+    free(b->data);
+    free(b);
+}
+
+
+char textBuffer_consume(struct TextBuffer *b)
+{
+    assert(b->size > 0);
+    char toReturn = b->data[0];
+    --b->size;
+    memmove(b->data, b->data + 1, b->size);
     return toReturn;
 }
 
-void bufferInsert(struct PreprocessorContext *context, char c)
+void textBuffer_insert(struct TextBuffer *b, char c)
 {
-    if ((context->bufLen + 1) >= context->bufCap)
+    if ((b->size + 1) >= b->capacity)
     {
-        context->bufCap++;
-        context->inBuf = realloc(context->inBuf, context->bufCap);
+        b->capacity++;
+        b->data = realloc(b->data, b->capacity);
     }
 
-    context->inBuf[context->bufLen++] = c;
+    b->data[b->size++] = c;
 }
 
-void bufferInsertFront(struct PreprocessorContext *context, char *s)
+void textBuffer_insertFront(struct TextBuffer *b, char *s)
 {
     int insertedStringLength = strlen(s);
-    if ((context->bufLen + insertedStringLength) >= context->bufCap)
+    if ((b->size + insertedStringLength) >= b->capacity)
     {
-        context->bufCap += insertedStringLength;
-        context->inBuf = realloc(context->inBuf, context->bufCap);
+        b->capacity += insertedStringLength;
+        b->data = realloc(b->data, b->capacity);
     }
 
-    memmove(context->inBuf + insertedStringLength, context->inBuf, context->bufLen);
+    memmove(b->data + insertedStringLength, b->data, b->size);
 
-    memcpy(context->inBuf, s, insertedStringLength);
-    context->bufLen += insertedStringLength;
+    memcpy(b->data, s, insertedStringLength);
+    b->size += insertedStringLength;
+}
+
+void textBuffer_erase(struct TextBuffer *b, unsigned n)
+{
+    if(n >= b->size)
+    {
+        b->size = 0;
+    }
+    else
+    {
+        memmove(b->data, b->data + n, b->size - n);
+        b->size-= n;
+    }
 }
 
 extern struct LinkedList *includePath;
@@ -83,6 +111,8 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
     struct PreprocessorContext context;
     memset(&context, 0, sizeof(struct PreprocessorContext));
     char readingStdin = 0;
+
+    context.inBuf = textBuffer_new();
 
     char *oldWd = getcwd(NULL, 0);
 
@@ -130,26 +160,25 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
 
     while (pcc_parse(parseContext, &ret))
     {
-        while (context.bufLen > 0)
+        while (context.inBuf->size > 0)
         {
             attemptMacroSubstitution(&context, 0);
-            if(context.bufLen > 0)
+            if(context.inBuf->size > 0)
             {
-                fputc(bufferConsume(&context), context.outFile);
+                fputc(textBuffer_consume(context.inBuf), context.outFile);
             }
         }
     }
 
-    while (context.bufLen > 0)
+    while (context.inBuf->size > 0)
     {
         attemptMacroSubstitution(&context, 0);
-        if(context.bufLen > 0)
+        if(context.inBuf->size > 0)
         {
-            fputc(bufferConsume(&context), context.outFile);
+            fputc(textBuffer_consume(context.inBuf), context.outFile);
         }
     }
 
-    free(context.inBuf);
     if (oldContext->includeDepth == 0)
     {
         HashTable_Free(context.defines);
@@ -159,6 +188,8 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
             readingStdin = 1;
         }
     }
+
+    textBuffer_free(context.inBuf);
 
     pcc_destroy(parseContext);
 

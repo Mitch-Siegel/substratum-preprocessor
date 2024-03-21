@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "text-manipulation.h"
+
 enum MacroTypes
 {
     mt_textsub,  // macro as direct a->b text substitution
@@ -74,54 +76,24 @@ void handleDefineChange(struct PreprocessorContext *c)
 
 struct Macro *findMacro(struct PreprocessorContext *c)
 {
-    char *strBuf = malloc(c->bufLen + 1);
-    memcpy(strBuf, c->inBuf, c->bufLen);
-    strBuf[c->bufLen] = '\0';
-
     for (int i = 0; i < c->keywordsByLength->size; i++)
     {
         char *comparedKeyword = c->keywordsByLength->data[i];
-        if (strncmp(c->inBuf, comparedKeyword, strlen(comparedKeyword)) == 0)
+        int comparedLen = strlen(comparedKeyword);
+        if ((comparedLen <= c->inBuf->size) && (strncmp(c->inBuf->data, comparedKeyword, comparedLen) == 0))
         {
-            free(strBuf);
             return HashTable_Lookup(c->defines, comparedKeyword)->value;
         }
     }
-    free(strBuf);
     return NULL;
-}
-
-char **spaceSeparatedParamsListToArray(char *list, unsigned int *arraySize)
-{
-    char **array = NULL;
-    char *dupPl = strdup(list);
-
-    char *lasts;
-    char *tok = strtok_r(dupPl, " ", &lasts);
-
-    while (tok != NULL)
-    {
-        array = realloc(array, ((*arraySize) + 1) * sizeof(char *));
-
-        array[*arraySize] = strdup(tok);
-        (*arraySize)++;
-
-        tok = strtok_r(NULL, " ", &lasts);
-    }
-
-    free(dupPl);
-
-    return array;
 }
 
 void handleTextSubstitutionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
 {
     assert(toOutput->type == mt_textsub);
 
-    int printedLen = strlen(toOutput->inVal);
-    c->bufLen -= printedLen;
-    memmove(c->inBuf, c->inBuf + printedLen, c->bufLen);
-    bufferInsertFront(c, toOutput->outVal);
+    textBuffer_erase(c->inBuf, strlen(toOutput->inVal));
+    textBuffer_insertFront(c->inBuf, toOutput->outVal);
 }
 
 void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
@@ -129,75 +101,13 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
     assert(toOutput->type == mt_function);
 
     printf("inval:%s\n", toOutput->inVal);
-    int inValLen = strlen(toOutput->inVal);
-    while (inValLen-- > 0)
-    {
-        bufferConsume(c);
-    }
+    textBuffer_erase(c->inBuf, strlen(toOutput->inVal));
 
-    for (int i = 0; i < c->bufLen; i++)
-    {
-        printf("%c", c->inBuf[i]);
-    }
-    printf("\n");
-
-    if (c->inBuf[0] != '(')
-    {
-        printf("Error expanding function macro %s - didn't see open paren!\n", toOutput->inVal);
-    }
-    bufferConsume(c); // grab the first open paren out of the buffer to start
-
-    char *paramsListBuf = malloc(c->bufLen);
-    unsigned paramsListLen = 0;
-
-    int parenDepth = 1;
-    while ((parenDepth > 0) && (c->bufLen > 0))
-    {
-        char fromBuffer = bufferConsume(c);
-        switch (fromBuffer)
-        {
-        case ',':
-            // strip commas in the macro at the first level - so (second_function(a, b), c) becomes (second_function(a, b) c)
-            if (parenDepth > 1)
-            {
-                paramsListBuf[paramsListLen++] = fromBuffer;
-            }
-            break;
-
-        case ')':
-            parenDepth--;
-            if (parenDepth == 0)
-            {
-                break;
-            }
-            // add non-final rparen to buffer
-            paramsListBuf[paramsListLen++] = fromBuffer;
-            break;
-
-        case '(':
-            parenDepth++;
-            paramsListBuf[paramsListLen++] = fromBuffer;
-            break;
-
-        default:
-            paramsListBuf[paramsListLen++] = fromBuffer;
-            break;
-        }
-
-        printf("got character %c from buf - depth is %d\n", fromBuffer, parenDepth);
-    }
-
-    if (parenDepth != 0)
-    {
-        printf("unclosed parenthesis while expanding macro %s\n", toOutput->inVal);
-        exit(1);
-    }
-
-    paramsListBuf[paramsListLen] = '\0';
+    char *paramsListBuf = removeFirstLayerCommasFromMatchedParens(c->inBuf);
 
     printf("paramslistbuf: %s\n", paramsListBuf);
 
-    paramsListLen = 0;
+    unsigned int paramsListLen = 0;
     char **paramsList = spaceSeparatedParamsListToArray(paramsListBuf, &paramsListLen);
 
     if (paramsListLen != toOutput->nParams)
@@ -206,9 +116,7 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
         exit(1);
     }
 
-    char *oldBuf = strndup(c->inBuf, c->bufLen);
-    unsigned oldBufLen = c->bufLen;
-    unsigned oldBufCap = c->bufCap;
+    struct TextBuffer *oldBuf = c->inBuf;
     struct HashTable *oldDefines = c->defines;
     struct Stack *oldKeywordsByLength = c->keywordsByLength;
 
@@ -221,21 +129,21 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
         printf("define sub %s->%s\n", toOutput->paramsList[i], paramsList[i]);
     }
 
-    c->bufLen = 0;
+    c->inBuf = textBuffer_new();
 
     int outValLen = strlen(toOutput->outVal);
     printf("write outval %s to buffer\n", toOutput->outVal);
     for (int i = 0; i < outValLen; i++)
     {
-        bufferInsert(c, toOutput->outVal[i]);
+        textBuffer_insert(c->inBuf, toOutput->outVal[i]);
     }
 
-    while (c->bufLen > 0)
+    while (c->inBuf->size > 0)
     {
         attemptMacroSubstitution(c, 0);
-        if (c->bufLen > 0)
+        if (c->inBuf->size > 0)
         {
-            fputc(bufferConsume(c), c->outFile);
+            fputc(textBuffer_consume(c->inBuf), c->outFile);
         }
     }
 
@@ -244,10 +152,8 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
     HashTable_Free(c->defines);
     c->defines = oldDefines;
 
-    
-    assert(c->bufCap >= oldBufCap); // make sure the buffer capacity didn't change
-    memcpy(c->inBuf, oldBuf, oldBufLen);
-    c->bufLen = oldBufLen;
+    textBuffer_free(c->inBuf);
+    c->inBuf = oldBuf;
 
 }
 
@@ -275,7 +181,7 @@ int attemptMacroSubstitutionRecursive(struct PreprocessorContext *c, char stillP
     }
 
     // early return if there is more input (put it into the buffer so we don't accidentally greedily match a prefix of a keyword)
-    if ((stillParsing && (c->bufLen < longestKeyword)) || (longestKeyword == 0))
+    if ((stillParsing && (c->inBuf->size < longestKeyword)) || (longestKeyword == 0))
     {
         return 0;
     }

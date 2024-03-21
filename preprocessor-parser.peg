@@ -17,11 +17,11 @@ line
     / u:undef_line
     / i:include_line
     / comment
-    / character* <e:eol> { for(int i = 0; i < strlen($1); i++) {bufferInsert(auxil, $1[i]);}; }
+    / character* <e:eol> { for(int i = 0; i < strlen($1); i++) {textBuffer_insert(auxil->inBuf, $1[i]);}; }
     / eof
 
 character
-   <- [^\n] { bufferInsert(auxil, $0[0]); }
+   <- [^\n] { textBuffer_insert(auxil->inBuf, $0[0]); }
 
 define_line
    <- d:define_token blank+ <token> _ eol                                      { defineTextSubMacro(auxil, d, $1); }

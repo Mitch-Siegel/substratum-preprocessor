@@ -4,11 +4,20 @@
 #ifndef _PREPROCESSOR_BUFFERING_H_
 #define _PREPROCESSOR_BUFFERING_H_
 
+struct TextBuffer
+{
+    char *data;
+    size_t size;      // number of characters currently in the buffer
+    size_t capacity; // max capacity of the buffer
+};
+
+struct TextBuffer *textBuffer_new();
+
+void textBuffer_free(struct TextBuffer *b);
+
 struct PreprocessorContext
 {
-    char *inBuf;
-    size_t bufLen; // number of characters currently in the buffer
-    size_t bufCap; // max capacity of the buffer
+    struct TextBuffer *inBuf;
     FILE *inFile;
     FILE *outFile;
     unsigned int curLine;
@@ -22,11 +31,14 @@ struct PreprocessorContext
     struct PreprocessorContext *includedFrom;
 };
 
-char bufferConsume(struct PreprocessorContext *context);
+char textBuffer_consume(struct TextBuffer *b);
 
-void bufferInsert(struct PreprocessorContext *context, char c);
+void textBuffer_insert(struct TextBuffer *b, char c);
 
-void bufferInsertFront(struct PreprocessorContext *context, char *s);
+void textBuffer_insertFront(struct TextBuffer *b, char *s);
+
+ // erase n characters from the front of the buffer
+void textBuffer_erase(struct TextBuffer *b, unsigned n);
 
 void includeFile(struct PreprocessorContext *context, char *s);
 
