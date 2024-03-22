@@ -77,7 +77,6 @@ extern struct LinkedList *includePath;
 FILE *searchIncludeToOpen(char *fileName)
 {
     FILE *opened = NULL;
-    printf("attempt to open %s\n", fileName);
     opened = fopen(fileName, "rb");
 
     if (opened != NULL)
@@ -102,7 +101,6 @@ FILE *searchIncludeToOpen(char *fileName)
         strcat(prefixedPath, "/");
         strcat(prefixedPath, fileName);
 
-        printf("try %s\n", prefixedPath);
         opened = fopen(prefixedPath, "rb");
 
         if (opened != NULL)
@@ -192,7 +190,6 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
     {
         context.inFile = searchIncludeToOpen(s);
         char *newCwd = getcwd(NULL, 0);
-        printf("old wd [%s], new [%s]\n", oldWd, newCwd);
         free(newCwd);
     }
 

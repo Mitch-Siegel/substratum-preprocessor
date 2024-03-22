@@ -13,20 +13,21 @@
 }
 
 line
-   <- d:define_line
-    / u:undef_line
-    / i:include_line
-    / comment
-    / character* <e:eol> { for(int i = 0; i < strlen($1); i++) {textBuffer_insert(auxil->inBuf, $1[i]);}; }
+   <- d:define_line eof*
+    / u:undef_line eof*
+    / i:include_line eof*
+    / comment eof*
+    / character* _ <e:eol> eof*  { for(int i = 0; i < strlen($1); i++) {textBuffer_insert(auxil->inBuf, $1[i]);}; }
+    / character* _ eof*
     / eof
 
 character
-   <- [^\n] { textBuffer_insert(auxil->inBuf, $0[0]); }
+   <- (!comment [^\n]) { textBuffer_insert(auxil->inBuf, $0[0]); }
 
 define_line
-   <- d:define_token blank+ <token> _ eol                                           { defineTextSubMacro(auxil, d, $1); }
-    / d:define_token _ eol                                                          { defineTextSubMacro(auxil, d, NULL); }
-    / d:define_token blank* "(" m:func_param_list blank* ")" blank* b:func_body eol { defineFunctionMacro(auxil, d, m, b); }
+   <- d:define_token blank+ <token> _ eol                                              { defineTextSubMacro(auxil, d, $1); }
+    / d:define_token _ eol                                                             { defineTextSubMacro(auxil, d, NULL); }
+    / d:define_token blank* "(" m:func_param_list blank* ")" blank* b:func_body _ eol  { defineFunctionMacro(auxil, d, m, b); }
 
 undef_line
    <- u:undef_token _ eol      { undefineMacro(auxil, u); }
