@@ -6,24 +6,8 @@
 #include <assert.h>
 
 #include "text-manipulation.h"
+#include "macro.h"
 
-enum MacroTypes
-{
-    mt_textsub,  // macro as direct a->b text substitution
-    mt_function, // macro as function
-};
-
-struct Macro
-{
-    char *inVal;
-    char *outVal;
-
-    // only valid if type == mt_function
-    char **paramsList; // array of strings naming the params of this macro function
-    unsigned nParams;  // size of the array of params
-
-    enum MacroTypes type;
-};
 
 int longestKeyword = 0;
 
@@ -127,8 +111,6 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput, 
     unsigned int paramsListLen = 0;
     char **paramsList = spaceSeparatedParamsListToArray(paramsListBuf, &paramsListLen);
 
-    printf("paramsList: [%s]\n", paramsListBuf);
-
     if (paramsListLen != toOutput->nParams)
     {
         printf("Number of arguments (%d) provided to macro function %s doesn't match %d expected!\n", paramsListLen, toOutput->inVal, toOutput->nParams);
@@ -142,10 +124,15 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput, 
     c->defines = HashTable_New(oldDefines->nBuckets);
     c->keywordsByLength = Stack_New();
 
+    // define text substitutions for the values of each macro parameter
     for (int i = 0; i < toOutput->nParams; i++)
     {
         defineTextSubMacro(c, toOutput->paramsList[i], paramsList[i]);
+        free(paramsList[i]);
     }
+    // clean up our intermediate string handling buffers
+    free(paramsList);
+    free(paramsListBuf);
 
     c->inBuf = textBuffer_new();
     struct TextBuffer *intermediateOutBuf = textBuffer_new();
@@ -154,8 +141,6 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput, 
 
     // process the entire macro function into the old context's buffer
     preprocessUntilBufferEmpty(c, intermediateOutBuf, 0);
-
-    printf("intermediatebuf: [%s]\n", intermediateOutBuf->data);
 
     if (oldBuf == expandToBuf)
     {
@@ -170,9 +155,11 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput, 
         }
     }
 
+    textBuffer_free(intermediateOutBuf);
+
     Stack_Free(c->keywordsByLength);
     c->keywordsByLength = oldKeywordsByLength;
-    HashTable_Free(c->defines);
+    HashTable_Free(c->defines, (void (*)(void *))macro_free);
     c->defines = oldDefines;
 
     textBuffer_free(c->inBuf);
@@ -245,10 +232,7 @@ void attemptMacroSubstitution(struct PreprocessorContext *c, char stillParsing)
 // must strdup as outVal is passed directly in from packcc parser
 void defineTextSubMacro(struct PreprocessorContext *c, char *token, char *outVal)
 {
-    struct Macro *newMacro = malloc(sizeof(struct Macro));
-    newMacro->inVal = strdup(token);
-    newMacro->outVal = strdup(outVal);
-    newMacro->type = mt_textsub;
+    struct Macro *newMacro = macro_new(token, outVal, mt_textsub);
     HashTable_Insert(c->defines, newMacro->inVal, newMacro);
     handleDefineChange(c);
 }
@@ -256,14 +240,10 @@ void defineTextSubMacro(struct PreprocessorContext *c, char *token, char *outVal
 // no need to strdup spaceSeparatedParamsList as packcc parser manages allocation while converting from comma separated to space separated
 void defineFunctionMacro(struct PreprocessorContext *c, char *token, char *spaceSeparatedParamsList, char *funcBody)
 {
-    struct Macro *newMacro = malloc(sizeof(struct Macro));
-    memset(newMacro, 0, sizeof(struct Macro));
-    newMacro->inVal = strdup(token);
-    newMacro->type = mt_function;
-
-    newMacro->outVal = strdup(funcBody);
-
+    struct Macro *newMacro = macro_new(token, funcBody, mt_function);
+    
     newMacro->paramsList = spaceSeparatedParamsListToArray(spaceSeparatedParamsList, &newMacro->nParams);
+    free(spaceSeparatedParamsList);
 
     HashTable_Insert(c->defines, newMacro->inVal, newMacro);
     handleDefineChange(c);

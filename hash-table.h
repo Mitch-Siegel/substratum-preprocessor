@@ -58,6 +58,6 @@ struct HashTableEntry *HashTable_Lookup(struct HashTable *ht, char *key);
 
 void HashTable_Remove(struct HashTable *ht, char *key, void(*freeDataFunction)(void *));
 
-void HashTable_Free(struct HashTable *ht);
+void HashTable_Free(struct HashTable *ht, void(*freeHashTableEntryData)(void *));
 
 #endif

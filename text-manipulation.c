@@ -80,11 +80,6 @@ char **spaceSeparatedParamsListToArray(char *list, unsigned int *arraySize)
 
     free(dupPl);
 
-    for(int i = 0; i < *arraySize; i++)
-    {
-        printf("%d:%s\n", i, array[i]);
-    }
-
     return array;
 }
 

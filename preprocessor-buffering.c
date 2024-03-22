@@ -8,6 +8,7 @@
 #include <errno.h>
 
 #include "preprocessor-parser.h"
+#include "macro.h"
 
 struct TextBuffer *textBuffer_new()
 {
@@ -206,7 +207,7 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
 
     if (oldContext->includeDepth == 0)
     {
-        HashTable_Free(context.defines);
+        HashTable_Free(context.defines, (void (*)(void *))macro_free);
         Stack_Free(context.keywordsByLength);
         if (!strcmp(s, "stdin"))
         {
@@ -215,6 +216,7 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
     }
 
     textBuffer_free(context.inBuf);
+    textBuffer_free(context.outBuf);
 
     pcc_destroy(parseContext);
 

@@ -4,7 +4,6 @@
 #include <string.h>
 #include <stdio.h>
 
-
 unsigned int hash(char *str)
 {
 	unsigned int hash = 5381;
@@ -146,7 +145,7 @@ void *LinkedList_Delete(struct LinkedList *l, int (*compareFunction)(void *, voi
 		}
 	}
 	perror("Couldn't delete element from linked list!\n");
-    abort();
+	abort();
 }
 
 void *LinkedList_Find(struct LinkedList *l, int (*compareFunction)(void *, void *), void *element)
@@ -166,7 +165,7 @@ void *LinkedList_PopFront(struct LinkedList *l)
 	if (l->size == 0)
 	{
 		perror("Unable to pop front from empty linkedlist!\n");
-        abort();
+		abort();
 	}
 	struct LinkedListNode *popped = l->head;
 
@@ -191,8 +190,8 @@ void *LinkedList_PopBack(struct LinkedList *l)
 {
 	if (l->size == 0)
 	{
-        perror("Unable to pop front from empty linkedlist!\n");
-        abort();
+		perror("Unable to pop front from empty linkedlist!\n");
+		abort();
 	}
 	struct LinkedListNode *popped = l->tail;
 
@@ -283,10 +282,10 @@ struct HashTable *HashTable_New(int nBuckets)
 
 struct HashTableEntry *HashTable_Insert(struct HashTable *ht, char *key, void *value)
 {
-    struct HashTableEntry *newEntry = malloc(sizeof(struct HashTableEntry));
+	struct HashTableEntry *newEntry = malloc(sizeof(struct HashTableEntry));
 	newEntry->key = key;
-    newEntry->value = value;
-    newEntry->hash = hash(key);
+	newEntry->value = value;
+	newEntry->hash = hash(key);
 
 	LinkedList_Append(ht->buckets[newEntry->hash % ht->nBuckets], newEntry);
 
@@ -307,7 +306,7 @@ struct HashTableEntry *HashTable_Lookup(struct HashTable *ht, char *key)
 
 	while (runner != NULL)
 	{
-        struct HashTableEntry *examinedEntry = runner->data;
+		struct HashTableEntry *examinedEntry = runner->data;
 		if ((examinedEntry->hash == strHash) && (strcmp(examinedEntry->key, key) == 0))
 		{
 			return examinedEntry;
@@ -336,7 +335,7 @@ int compareHashTableEntries(void *a, void *b)
 	return strcmp((((struct HashTableEntry *)a)->key), b);
 }
 
-void HashTable_Remove(struct HashTable *ht, char *key, void(*freeDataFunction)(void *))
+void HashTable_Remove(struct HashTable *ht, char *key, void (*freeDataFunction)(void *))
 {
 	unsigned int strHash = hash(key);
 
@@ -347,16 +346,24 @@ void HashTable_Remove(struct HashTable *ht, char *key, void(*freeDataFunction)(v
 	}
 
 	void *data = LinkedList_Delete(bucket, compareHashTableEntries, key);
-	if(freeDataFunction != NULL)
+	if (freeDataFunction != NULL)
 	{
 		freeDataFunction(data);
 	}
 }
 
-void HashTable_Free(struct HashTable *ht)
+void HashTable_Free(struct HashTable *ht, void (*freeHashTableEntryData)(void *))
 {
 	for (int i = 0; i < ht->nBuckets; i++)
 	{
+		if (freeHashTableEntryData)
+		{
+			for (struct LinkedListNode *runner = ht->buckets[i]->head; runner != NULL; runner = runner->next)
+			{
+				struct HashTableEntry *e = runner->data;
+				freeHashTableEntryData(e->value);
+			}
+		}
 		LinkedList_Free(ht->buckets[i], free);
 	}
 	free(ht->buckets);
