@@ -74,6 +74,7 @@ void textBuffer_erase(struct TextBuffer *b, unsigned n)
 
 extern struct LinkedList *includePath;
 
+// attempt to open fileName in the current directory. If that fails, traverse the include path attempting to open fileName under the include path directories
 FILE *searchIncludeToOpen(char *fileName)
 {
     FILE *opened = NULL;
@@ -106,13 +107,43 @@ FILE *searchIncludeToOpen(char *fileName)
     return NULL;
 }
 
+// attempt macro substitution on the full buffer contained within 'context', expanding any macros as we go
+// context: preprocessor context containing input buffer and macro definitions
+// outBuf: text buffer to output will be directed
+// expandToInput: if nonzero, expansion will loop to context->inBuf, otherwise macros will be expanded to outBuf
+void preprocessUntilBufferEmpty(struct PreprocessorContext *context, struct TextBuffer *outBuf, char expandToInput)
+{
+    // until the buffer is empty
+    while (context->inBuf->size > 0)
+    {
+        // try and expand any (all) macros at the start of the buffer
+        if(expandToInput)
+        {
+            attemptMacroSubstitutionToBuffer(context, context->inBuf, 0);
+        }
+        else
+        {
+            attemptMacroSubstitutionToBuffer(context, outBuf, 0);
+        }
+
+        // return from above call means done expanding, nothing else to expand at front of buffer
+        if(context->inBuf->size > 0)
+        {
+            // consume the first character in the buffer, loop again to attempt more expansion
+            textBuffer_insert(outBuf, textBuffer_consume(context->inBuf));
+        }
+    }
+}
+
 void includeFile(struct PreprocessorContext *oldContext, char *s)
 {
     struct PreprocessorContext context;
     memset(&context, 0, sizeof(struct PreprocessorContext));
+
     char readingStdin = 0;
 
     context.inBuf = textBuffer_new();
+    context.outBuf = textBuffer_new();
 
     char *oldWd = getcwd(NULL, 0);
 
@@ -160,23 +191,17 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
 
     while (pcc_parse(parseContext, &ret))
     {
-        while (context.inBuf->size > 0)
+        preprocessUntilBufferEmpty(&context, context.outBuf, 1);
+        while(context.outBuf->size > 0)
         {
-            attemptMacroSubstitution(&context, 0);
-            if(context.inBuf->size > 0)
-            {
-                fputc(textBuffer_consume(context.inBuf), context.outFile);
-            }
+            fputc(textBuffer_consume(context.outBuf), context.outFile);
         }
     }
 
-    while (context.inBuf->size > 0)
+    preprocessUntilBufferEmpty(&context, context.outBuf, 1);
+    while(context.outBuf->size > 0)
     {
-        attemptMacroSubstitution(&context, 0);
-        if(context.inBuf->size > 0)
-        {
-            fputc(textBuffer_consume(context.inBuf), context.outFile);
-        }
+        fputc(textBuffer_consume(context.outBuf), context.outFile);
     }
 
     if (oldContext->includeDepth == 0)

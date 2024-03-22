@@ -18,6 +18,7 @@ void textBuffer_free(struct TextBuffer *b);
 struct PreprocessorContext
 {
     struct TextBuffer *inBuf;
+    struct TextBuffer *outBuf;
     FILE *inFile;
     FILE *outFile;
     unsigned int curLine;
@@ -39,6 +40,8 @@ void textBuffer_insertFront(struct TextBuffer *b, char *s);
 
  // erase n characters from the front of the buffer
 void textBuffer_erase(struct TextBuffer *b, unsigned n);
+
+void preprocessUntilBufferEmpty(struct PreprocessorContext *context, struct TextBuffer *outBuf, char expandToInput);
 
 void includeFile(struct PreprocessorContext *context, char *s);
 

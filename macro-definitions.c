@@ -59,7 +59,7 @@ void handleDefineChange(struct PreprocessorContext *c)
 
             int compLen = strlen((char *)c->keywordsByLength->data[j + 1]);
 
-            if (thisLen > compLen)
+            if (thisLen < compLen)
             {
                 struct Lifetime *swap = c->keywordsByLength->data[j];
                 c->keywordsByLength->data[j] = c->keywordsByLength->data[j + 1];
@@ -82,21 +82,41 @@ struct Macro *findMacro(struct PreprocessorContext *c)
         int comparedLen = strlen(comparedKeyword);
         if ((comparedLen <= c->inBuf->size) && (strncmp(c->inBuf->data, comparedKeyword, comparedLen) == 0))
         {
-            return HashTable_Lookup(c->defines, comparedKeyword)->value;
+            struct Macro *matchedMacro = HashTable_Lookup(c->defines, comparedKeyword)->value;
+
+            // if we match a function macro, it can only be expanded if the next character in the buffer is a paren
+            if ((matchedMacro->type == mt_function) &&
+                ((c->inBuf->size <= comparedLen) || (c->inBuf->data[comparedLen] != '(')))
+            {
+                return NULL;
+            }
+
+            return matchedMacro;
         }
     }
     return NULL;
 }
 
-void handleTextSubstitutionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
+void handleTextSubstitutionMacro(struct PreprocessorContext *c, struct Macro *toOutput, struct TextBuffer *expandToBuf)
 {
     assert(toOutput->type == mt_textsub);
-
     textBuffer_erase(c->inBuf, strlen(toOutput->inVal));
-    textBuffer_insertFront(c->inBuf, toOutput->outVal);
+
+    if (c->inBuf == expandToBuf)
+    {
+        textBuffer_insertFront(expandToBuf, toOutput->outVal);
+    }
+    else
+    {
+        int outLen = strlen(toOutput->outVal);
+        for (int i = 0; i < outLen; i++)
+        {
+            textBuffer_insert(expandToBuf, toOutput->outVal[i]);
+        }
+    }
 }
 
-void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
+void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput, struct TextBuffer *expandToBuf)
 {
     assert(toOutput->type == mt_function);
 
@@ -106,6 +126,8 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
 
     unsigned int paramsListLen = 0;
     char **paramsList = spaceSeparatedParamsListToArray(paramsListBuf, &paramsListLen);
+
+    printf("paramsList: [%s]\n", paramsListBuf);
 
     if (paramsListLen != toOutput->nParams)
     {
@@ -126,19 +148,25 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
     }
 
     c->inBuf = textBuffer_new();
+    struct TextBuffer *intermediateOutBuf = textBuffer_new();
 
-    int outValLen = strlen(toOutput->outVal);
-    for (int i = 0; i < outValLen; i++)
+    textBuffer_insertFront(c->inBuf, toOutput->outVal);
+
+    // process the entire macro function into the old context's buffer
+    preprocessUntilBufferEmpty(c, intermediateOutBuf, 0);
+
+    printf("intermediatebuf: [%s]\n", intermediateOutBuf->data);
+
+    if (oldBuf == expandToBuf)
     {
-        textBuffer_insert(c->inBuf, toOutput->outVal[i]);
+        textBuffer_insert(intermediateOutBuf, '\0');
+        textBuffer_insertFront(expandToBuf, intermediateOutBuf->data);
     }
-
-    while (c->inBuf->size > 0)
+    else
     {
-        attemptMacroSubstitution(c, 0);
-        if (c->inBuf->size > 0)
+        for (int i = 0; i < intermediateOutBuf->size; i++)
         {
-            fputc(textBuffer_consume(c->inBuf), c->outFile);
+            textBuffer_insert(expandToBuf, intermediateOutBuf->data[i]);
         }
     }
 
@@ -151,22 +179,22 @@ void handleFunctionMacro(struct PreprocessorContext *c, struct Macro *toOutput)
     c->inBuf = oldBuf;
 }
 
-void handleMacro(struct PreprocessorContext *c, struct Macro *toOutput)
+void handleMacro(struct PreprocessorContext *c, struct Macro *toOutput, struct TextBuffer *expandToBuf)
 {
     switch (toOutput->type)
     {
     case mt_textsub:
-        handleTextSubstitutionMacro(c, toOutput);
+        handleTextSubstitutionMacro(c, toOutput, expandToBuf);
         break;
 
     case mt_function:
-        handleFunctionMacro(c, toOutput);
+        handleFunctionMacro(c, toOutput, expandToBuf);
         break;
     }
 }
 
 // returns number of macros expanded
-int attemptMacroSubstitutionRecursive(struct PreprocessorContext *c, char stillParsing, int depth)
+int attemptMacroSubstitutionRecursive(struct PreprocessorContext *c, struct TextBuffer *expandToBuf, char stillParsing, int depth)
 {
     if (depth > 0xFF)
     {
@@ -188,19 +216,30 @@ int attemptMacroSubstitutionRecursive(struct PreprocessorContext *c, char stillP
         return 0;
     }
 
-    handleMacro(c, m);
-    return 1 + attemptMacroSubstitutionRecursive(c, stillParsing, depth + 1);
+    handleMacro(c, m, expandToBuf);
+    return 1 + attemptMacroSubstitutionRecursive(c, expandToBuf, stillParsing, depth + 1);
 }
 
-void attemptMacroSubstitution(struct PreprocessorContext *c, char stillParsing)
+// entry function for macro substitution attempts
+// will continually try to expand macros as long as the previous run was able to expand something
+// expands macros into TextBuffer b
+void attemptMacroSubstitutionToBuffer(struct PreprocessorContext *c, struct TextBuffer *expandToBuf, char stillParsing)
 {
     int nExpansions = 0;
     int lastExpansions = 0;
 
-    while ((nExpansions += attemptMacroSubstitutionRecursive(c, stillParsing, nExpansions)) > lastExpansions)
+    while ((nExpansions += attemptMacroSubstitutionRecursive(c, expandToBuf, stillParsing, nExpansions)) > lastExpansions)
     {
         lastExpansions = nExpansions;
     }
+}
+
+// entry function for macro substitution attempts
+// will continually try to expand macros as long as the previous run was able to expand something
+// expands macros back into c's input buffer
+void attemptMacroSubstitution(struct PreprocessorContext *c, char stillParsing)
+{
+    attemptMacroSubstitutionToBuffer(c, c->inBuf, stillParsing);
 }
 
 // must strdup as outVal is passed directly in from packcc parser
@@ -222,12 +261,7 @@ void defineFunctionMacro(struct PreprocessorContext *c, char *token, char *space
     newMacro->inVal = strdup(token);
     newMacro->type = mt_function;
 
-    struct TextBuffer *macroBodyBuffer = textBuffer_new();
-    textBuffer_insertFront(macroBodyBuffer, funcBody);
-    textBuffer_insertFront(macroBodyBuffer, "(");
-    textBuffer_insert(macroBodyBuffer, ')');
-    newMacro->outVal = removeFirstLayerCommasFromMatchedParens(macroBodyBuffer);
-    textBuffer_free(macroBodyBuffer);
+    newMacro->outVal = strdup(funcBody);
 
     newMacro->paramsList = spaceSeparatedParamsListToArray(spaceSeparatedParamsList, &newMacro->nParams);
 
