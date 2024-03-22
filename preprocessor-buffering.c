@@ -17,13 +17,11 @@ struct TextBuffer *textBuffer_new()
     return b;
 }
 
-
 void textBuffer_free(struct TextBuffer *b)
 {
     free(b->data);
     free(b);
 }
-
 
 char textBuffer_consume(struct TextBuffer *b)
 {
@@ -62,14 +60,14 @@ void textBuffer_insertFront(struct TextBuffer *b, char *s)
 
 void textBuffer_erase(struct TextBuffer *b, unsigned n)
 {
-    if(n >= b->size)
+    if (n >= b->size)
     {
         b->size = 0;
     }
     else
     {
         memmove(b->data, b->data + n, b->size - n);
-        b->size-= n;
+        b->size -= n;
     }
 }
 
@@ -79,11 +77,20 @@ extern struct LinkedList *includePath;
 FILE *searchIncludeToOpen(char *fileName)
 {
     FILE *opened = NULL;
-
+    printf("attempt to open %s\n", fileName);
     opened = fopen(fileName, "rb");
 
     if (opened != NULL)
     {
+        char *dupedFileName = strdup(fileName);
+        if (chdir(dirname(dupedFileName)))
+        {
+            fprintf(stderr, "Found file \"%s\" but failed to change to its directory!\n", fileName);
+            perror(strerror(errno));
+            exit(1);
+        }
+        free(dupedFileName);
+
         return opened;
     }
 
@@ -97,12 +104,22 @@ FILE *searchIncludeToOpen(char *fileName)
 
         printf("try %s\n", prefixedPath);
         opened = fopen(prefixedPath, "rb");
-        free(prefixedPath);
 
         if (opened != NULL)
         {
+            char *dupedFileName = strdup(prefixedPath);
+            if (chdir(dirname(dupedFileName)))
+            {
+                fprintf(stderr, "Found file \"%s\" but failed to change to its directory!\n", prefixedPath);
+                perror(strerror(errno));
+                exit(1);
+            }
+            free(dupedFileName);
+            free(prefixedPath);
+
             return opened;
         }
+        free(prefixedPath);
     }
 
     return NULL;
@@ -118,7 +135,7 @@ void preprocessUntilBufferEmpty(struct PreprocessorContext *context, struct Text
     while (context->inBuf->size > 0)
     {
         // try and expand any (all) macros at the start of the buffer
-        if(expandToInput)
+        if (expandToInput)
         {
             attemptMacroSubstitutionToBuffer(context, context->inBuf, 0);
         }
@@ -128,7 +145,7 @@ void preprocessUntilBufferEmpty(struct PreprocessorContext *context, struct Text
         }
 
         // return from above call means done expanding, nothing else to expand at front of buffer
-        if(context->inBuf->size > 0)
+        if (context->inBuf->size > 0)
         {
             // consume the first character in the buffer, loop again to attempt more expansion
             textBuffer_insert(outBuf, textBuffer_consume(context->inBuf));
@@ -174,17 +191,9 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
     else
     {
         context.inFile = searchIncludeToOpen(s);
-        if (context.inFile == NULL)
-        {
-            printf("Unable to open file %s\n", s);
-            abort();
-        }
-
-        if (chdir(dirname(s)))
-        {
-            perror(strerror(errno));
-        }
-        printf("chdir to %s\n", dirname(s));
+        char *newCwd = getcwd(NULL, 0);
+        printf("old wd [%s], new [%s]\n", oldWd, newCwd);
+        free(newCwd);
     }
 
     char *ret;
@@ -193,14 +202,14 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
     while (pcc_parse(parseContext, &ret))
     {
         preprocessUntilBufferEmpty(&context, context.outBuf, 1);
-        while(context.outBuf->size > 0)
+        while (context.outBuf->size > 0)
         {
             fputc(textBuffer_consume(context.outBuf), context.outFile);
         }
     }
 
     preprocessUntilBufferEmpty(&context, context.outBuf, 1);
-    while(context.outBuf->size > 0)
+    while (context.outBuf->size > 0)
     {
         fputc(textBuffer_consume(context.outBuf), context.outFile);
     }
