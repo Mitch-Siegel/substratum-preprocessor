@@ -13,9 +13,10 @@
 }
 
 line
-   <- d:define_line eof*
-    / u:undef_line eof*
-    / i:include_line eof*
+   <- define_line eof*
+    / undef_line eof*
+    / include_line eof*
+    / ifdef_line eof*
     / comment eof*
     / character* _ <e:eol> eof*  { for(int i = 0; i < strlen($1); i++) {textBuffer_insert(auxil->inBuf, $1[i]);}; }
     / character* _ eof*
@@ -26,7 +27,7 @@ character
 
 define_line
    <- d:define_token blank+ <token> _ eol                                              { defineTextSubMacro(auxil, d, $1); }
-    / d:define_token _ eol                                                             { defineTextSubMacro(auxil, d, NULL); }
+    / d:define_token _ eol                                                             { defineTextSubMacro(auxil, d, ""); }
     / d:define_token blank* "(" m:func_param_list blank* ")" blank* b:func_body _ eol  { defineFunctionMacro(auxil, d, m, b); }
 
 undef_line
@@ -34,6 +35,11 @@ undef_line
 
 include_line
    <- "#include " blank* "\"" <[^"\""]+> "\"" _ eol { includeFile(auxil, $1); }
+
+ifdef_line
+   <- "#ifdef " blank* <t:token> _ eol  { enterIfdef(auxil, t, 1); }
+    / "#ifndef " blank* <t:token> _ eol { enterIfdef(auxil, t, 0); }
+    / "#endif" _ eol                  { exitIfdef(auxil); }
 
 define_token
    <- "#define " blank* <token> { $$ = $1; }

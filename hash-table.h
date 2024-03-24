@@ -44,6 +44,8 @@ void Stack_Push(struct Stack *s, void *data);
 
 void *Stack_Pop(struct Stack *s);
 
+void *Stack_Peek(struct Stack *s);
+
 struct LinkedList *LinkedList_New();
 
 void LinkedList_Free(struct LinkedList *l, void (*dataFreeFunction)(void *));

@@ -167,6 +167,7 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
     {
         context.defines = HashTable_New(10);
         context.keywordsByLength = Stack_New();
+        context.ifdefDepth = Stack_New();
         if (!strcmp(s, "stdin"))
         {
             readingStdin = 1;
@@ -176,6 +177,7 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
     {
         context.defines = oldContext->defines;
         context.keywordsByLength = oldContext->keywordsByLength;
+        context.ifdefDepth = oldContext->ifdefDepth;
     }
 
     context.includeDepth = oldContext->includeDepth + 1;

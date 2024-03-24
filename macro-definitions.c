@@ -212,6 +212,12 @@ int attemptMacroSubstitutionRecursive(struct PreprocessorContext *c, struct Text
 // expands macros into TextBuffer b
 void attemptMacroSubstitutionToBuffer(struct PreprocessorContext *c, struct TextBuffer *expandToBuf, char stillParsing)
 {
+    if((c->ifdefDepth->size > 0) && (Stack_Peek(c->ifdefDepth) == (void *)0))
+    {
+        c->inBuf->size = 0;
+        return;
+    }
+
     int nExpansions = 0;
     int lastExpansions = 0;
 
@@ -258,3 +264,29 @@ void undefineMacro(struct PreprocessorContext *c, char *token)
         handleDefineChange(c);
     }
 }
+
+void enterIfdef(struct PreprocessorContext *c, char *token, char isDefined)
+{
+    struct HashTableEntry *e = HashTable_Lookup(c->defines, token);
+    // if the token lookup's success matches whether or not we expect it to be defined
+    if ((e != NULL) == (isDefined > 0))
+    {
+        Stack_Push(c->ifdefDepth, (void *)1);
+    }
+    else
+    {
+        Stack_Push(c->ifdefDepth, (void *)0);
+    }
+}
+
+void exitIfdef(struct PreprocessorContext *c)
+{
+    if(c->ifdefDepth->size == 0)
+    {
+        perror("#endif seen without corresponding #ifdef/#ifndef!\n");
+        exit(1);
+    }
+
+    Stack_Pop(c->ifdefDepth);
+}
+
