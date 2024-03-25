@@ -217,6 +217,7 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
     {
         HashTable_Free(context.defines, (void (*)(void *))macro_free);
         Stack_Free(context.keywordsByLength);
+        Stack_Free(context.ifdefDepth);
         if (!strcmp(s, "stdin"))
         {
             readingStdin = 1;
