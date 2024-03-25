@@ -61,7 +61,7 @@ undef_token
    <- "#undef " blank* <token> { $$ = $1; }
 
 token
-   <- nonspace_nonparen+ { $$ = strdup($0); }
+   <- nonspace_nonparen+ { $$ = $0; }
 
 
 
