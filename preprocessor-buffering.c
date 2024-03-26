@@ -199,6 +199,12 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
     else
     {
         context.inFile = searchIncludeToOpen(s);
+        if(context.inFile == NULL)
+        {
+            fprintf(stderr, "Unable to open included/input file \"%s\"\n", s);
+            exit(1);
+        }
+
         char *newCwd = getcwd(NULL, 0);
         free(newCwd);
     }

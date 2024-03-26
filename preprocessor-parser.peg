@@ -18,8 +18,7 @@ line
     / include_line eof*
     / ifdef_line eof*
     / comment eof*
-    / character* _ <e:eol> eof*  { for(int i = 0; i < strlen($1); i++) {textBuffer_insert(auxil->inBuf, $1[i]);}; }
-    / character* _ eof*
+    / character* _ eol* eof*
     / eof
 
 character
@@ -70,19 +69,27 @@ _
     / (space / comment)*
 
 comment
-   <- '/*' (( !'*/' !eol . )* eol)* '*/' { emitPlace(auxil); }
+   <- '/*' (( !'*/' !eol . )* eol_silent*)* '*/' { emitPlace(auxil); }
     ## error handling ##
     / '/*' ( !'*/' . )*
     {
       perror("Unclosed comment block!\n");
       abort();
     }
-    / '//' (!eol .)* eol { textBuffer_insert(auxil->inBuf, '\n'); }
+    / '//' (!eol .)* eol_silent
 
 
 nonspace_nonparen <- (!space !"(" !")" .)
 
 space <- blank / eol
 blank <- [ \t\v\f]          { textBuffer_insert(auxil->inBuf, $0[0]); }
-eol <- '\r\n' / '\n' / '\r' { printf("END OF LINE!\n"); textBuffer_insert(auxil->inBuf, '@'); }
+eol
+   <- eol_silent { textBuffer_insert(auxil->inBuf, '\n'); }
+
+eol_silent
+   <- '\r\n'
+    / '\n'
+    / '\r'
+
+
 eof <- !.
