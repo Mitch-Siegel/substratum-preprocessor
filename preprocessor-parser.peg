@@ -70,19 +70,19 @@ _
     / (space / comment)*
 
 comment
-   <- '/*' ( !'*/' . )* '*/'
+   <- '/*' (( !'*/' !eol . )* eol)* '*/' { emitPlace(auxil); }
     ## error handling ##
     / '/*' ( !'*/' . )*
     {
       perror("Unclosed comment block!\n");
       abort();
     }
-    / '//' (!eol .)* eol
+    / '//' (!eol .)* eol { textBuffer_insert(auxil->inBuf, '\n'); }
 
 
 nonspace_nonparen <- (!space !"(" !")" .)
 
 space <- blank / eol
-blank <- [ \t\v\f]
-eol <- '\r\n' / '\n' / '\r'
+blank <- [ \t\v\f]          { textBuffer_insert(auxil->inBuf, $0[0]); }
+eol <- '\r\n' / '\n' / '\r' { printf("END OF LINE!\n"); textBuffer_insert(auxil->inBuf, '@'); }
 eof <- !.

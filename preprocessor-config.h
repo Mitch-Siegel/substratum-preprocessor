@@ -1,24 +1,37 @@
 #include <stdio.h>
 
-#define PCC_GETCHAR(auxil) ({          \
-    int inChar = fgetc(auxil->inFile); \
-    if (inChar == '\n')                \
-    {                                  \
-        auxil->curLineRaw++;           \
-        auxil->curColRaw = 0;          \
-    }                                  \
-    else                               \
-    {                                  \
-        auxil->curColRaw++;            \
-    }                                  \
-    inChar;                            \
+#define UPDATE_PLACE(p, c) \
+    {                      \
+        if ((c) == '\n')   \
+        {                  \
+            (p)->line++;   \
+            (p)->col = 0;  \
+        }                  \
+        else               \
+        {                  \
+            (p)->col++;    \
+        }                  \
+    }
+
+#define PCC_GETCHAR(auxil) ({               \
+    int inChar = fgetc(auxil->inFile);      \
+    UPDATE_PLACE(&auxil->rawPlace, inChar); \
+    inChar;                                 \
 })
 
-/*#define PCC_DEBUG(auxil, event, rule, level, pos, buffer, length)                                                                      \
+#define PCC_DEBUG(auxil, event, rule, level, pos, buffer, length)                                                                      \
     {                                                                                                                                  \
-        if (event == 1)                                                                                                                \
+        if (event == PCC_DBG_MATCH)                                                                                                    \
         {                                                                                                                              \
-            for (size_t i = 0; i < level; i++)                                                                                         \
+            if (pos == auxil->lastMatchedPosition + 1)                                                                                 \
+            {                                                                                                                          \
+                for (int i = 0; i < length; i++)                                                                                       \
+                {                                                                                                                      \
+                    UPDATE_PLACE(&auxil->matchedPlace, buffer[i]);                                                                     \
+                }                                                                                                                      \
+                auxil->lastMatchedPosition += length;                                                                                  \
+            }                                                                                                                          \
+            /*for (size_t i = 0; i < level; i++)                                                                                       \
             {                                                                                                                          \
                 printf("-   ");                                                                                                        \
             }                                                                                                                          \
@@ -35,6 +48,6 @@
                     printf("%c", buffer[i]);                                                                                           \
                 }                                                                                                                      \
             }                                                                                                                          \
-            printf("]\n");                                                                                                             \
+            printf("]\n");   */                                                                                                        \
         }                                                                                                                              \
-    }*/
+    }

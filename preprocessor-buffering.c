@@ -151,15 +151,23 @@ void preprocessUntilBufferEmpty(struct PreprocessorContext *context, struct Text
     }
 }
 
+void emitPlace(struct PreprocessorContext *context)
+{
+    printf("#PLACE %s:%d:%d - raw %d:%d\n", context->curFileName, context->matchedPlace.line, context->matchedPlace.col, context->rawPlace.line, context->rawPlace.col);
+}
+
 void includeFile(struct PreprocessorContext *oldContext, char *s)
 {
     struct PreprocessorContext context;
     memset(&context, 0, sizeof(struct PreprocessorContext));
+    context.rawPlace.line = 1;
+    context.matchedPlace.line = 1;
 
     char readingStdin = 0;
 
     context.inBuf = textBuffer_new();
     context.outBuf = textBuffer_new();
+    context.curFileName = s;
 
     char *oldWd = getcwd(NULL, 0);
 
@@ -198,6 +206,8 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
     char *ret;
     pcc_context_t *parseContext = pcc_create(&context);
 
+    emitPlace(&context);
+
     while (pcc_parse(parseContext, &ret))
     {
         preprocessUntilBufferEmpty(&context, context.outBuf, 1);
@@ -222,6 +232,10 @@ void includeFile(struct PreprocessorContext *oldContext, char *s)
         {
             readingStdin = 1;
         }
+    }
+    else
+    {
+        emitPlace(oldContext);
     }
 
     textBuffer_free(context.inBuf);

@@ -15,16 +15,21 @@ struct TextBuffer *textBuffer_new();
 
 void textBuffer_free(struct TextBuffer *b);
 
+struct ParserPlace
+{
+    unsigned int line;
+    unsigned int col;
+};
+
 struct PreprocessorContext
 {
     struct TextBuffer *inBuf;
     struct TextBuffer *outBuf;
     FILE *inFile;
     FILE *outFile;
-    unsigned int curLine;
-    unsigned int curCol;
-    unsigned int curLineRaw;
-    unsigned int curColRaw;
+    unsigned int lastMatchedPosition; // index of character (from start of pcc parse context) where the last match occurred
+    struct ParserPlace matchedPlace;  // character position up to which we have matched
+    struct ParserPlace rawPlace;      // character position up to which the parser has read (incl. lookahead) from input
     char *curFileName;
     struct HashTable *defines;
     struct Stack *keywordsByLength;
@@ -43,6 +48,8 @@ void textBuffer_insertFront(struct TextBuffer *b, char *s);
 void textBuffer_erase(struct TextBuffer *b, unsigned n);
 
 void preprocessUntilBufferEmpty(struct PreprocessorContext *context, struct TextBuffer *outBuf, char expandToInput);
+
+void emitPlace(struct PreprocessorContext *context);
 
 void includeFile(struct PreprocessorContext *context, char *s);
 
