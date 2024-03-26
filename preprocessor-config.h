@@ -19,19 +19,10 @@
     inChar;                                 \
 })
 
+/*
 #define PCC_DEBUG(auxil, event, rule, level, pos, buffer, length)                                                                      \
     {                                                                                                                                  \
-        if (event == PCC_DBG_MATCH)                                                                                                    \
-        {                                                                                                                              \
-            if (pos == auxil->lastMatchedPosition + 1)                                                                                 \
-            {                                                                                                                          \
-                for (int i = 0; i < length; i++)                                                                                       \
-                {                                                                                                                      \
-                    UPDATE_PLACE(&auxil->matchedPlace, buffer[i]);                                                                     \
-                }                                                                                                                      \
-                auxil->lastMatchedPosition += length;                                                                                  \
-            }                                                                                                                          \
-            /*for (size_t i = 0; i < level; i++)                                                                                       \
+            for (size_t i = 0; i < level; i++)                                                                                         \
             {                                                                                                                          \
                 printf("-   ");                                                                                                        \
             }                                                                                                                          \
@@ -48,6 +39,6 @@
                     printf("%c", buffer[i]);                                                                                           \
                 }                                                                                                                      \
             }                                                                                                                          \
-            printf("]\n");   */                                                                                                        \
-        }                                                                                                                              \
+            printf("]\n");                                                                                                             \
     }
+ */

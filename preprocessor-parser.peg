@@ -62,21 +62,29 @@ undef_token
 token
    <- nonspace_nonparen+ { $$ = $0; }
 
-
-
 _ 
    <- _*
     / (space / comment)*
 
 comment
-   <- '/*' (( !'*/' !eol . )* eol_silent*)* '*/' { emitPlace(auxil); }
+   <- block_comment_opener (non_block_comment_closer* eol*)* block_comment_closer
     ## error handling ##
     / '/*' ( !'*/' . )*
     {
       perror("Unclosed comment block!\n");
       abort();
     }
-    / '//' (!eol .)* eol_silent
+    / comment_opener non_newline* eol
+
+
+block_comment_opener <- '/*' { for(int i = 0; i < ($0e - $0s); i++) {textBuffer_insert(auxil->inBuf, ' ');}}
+block_comment_closer <- '*/' { for(int i = 0; i < ($0e - $0s); i++) {textBuffer_insert(auxil->inBuf, ' ');}}
+
+non_block_comment_closer
+   <- ( !block_comment_closer !eol . ) { for(int i = 0; i < ($0e - $0s); i++) {textBuffer_insert(auxil->inBuf, ' ');}}
+
+comment_opener <- '//'  { for(int i = 0; i < ($0e - $0s); i++) {textBuffer_insert(auxil->inBuf, ' ');}}
+non_newline <- (!eol .) { for(int i = 0; i < ($0e - $0s); i++) {textBuffer_insert(auxil->inBuf, ' ');}}
 
 
 nonspace_nonparen <- (!space !"(" !")" .)
